@@ -1,11 +1,34 @@
 #include <stdio.h>
+#include <thread>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #define PORT 8080
+
+void doTheThing(int new_socket, char *message) {
+
+	char ValueRead;
+	printf("\nValueRead instantiated");
+	int socket = new_socket;
+	printf("\nnew socket made");
+	char buffer[30000] = {0};
+	printf("\nbuffer made");
+	ValueRead = read(new_socket, buffer, 30000);
+	printf("\nValueRead has been read\n");
+	printf("%s\n", buffer);
+	//if statements for message, based on the path
+	write(new_socket, message, strlen(message));
+	printf("\npage has been written to");
+	printf("\n----------Hello message sent----------");
+	close(new_socket);
+	printf("\nsocket closed\n");
+
+
+}
 
 int main(int argc, char const *argv[]) {
 
@@ -14,7 +37,6 @@ int main(int argc, char const *argv[]) {
 
     //test message
     char *message = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: 12\n\nHello World!";
-
 
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
 
@@ -30,8 +52,6 @@ int main(int argc, char const *argv[]) {
     SocketAddressIn.sin_addr.s_addr = INADDR_ANY;
     SocketAddressIn.sin_port = htons(PORT);
 
-    //memset(server_socket, '\0', sizeof(SocketAddressIn));
-
     if (bind(server_socket, (struct sockaddr *)&SocketAddressIn, sizeof(SocketAddressIn)) < 0) {
 
         perror("gotta get grack on that bind");
@@ -46,30 +66,30 @@ int main(int argc, char const *argv[]) {
 
     }
 
-    int new_socket;
+    int client_socket;
     int AddressLength = sizeof(SocketAddressIn);
     char ValueRead;
 
     while (true) {
+	
+	printf("\n++++++++++ Waiting for connection ++++++++++\n\n");
 
-        printf("\n++++++++++ Waiting for connection ++++++++++\n\n");
+	if ((client_socket = accept(server_socket, (struct sockaddr *)&SocketAddressIn, (socklen_t*)&AddressLength)) < 0) {
 
-        if ((new_socket = accept(server_socket, (struct sockaddr *)&SocketAddressIn, (socklen_t*)&AddressLength)) < 0) {
+		perror("I can't believe you've done this");
+		return 1;
 
-            perror("I can't accept this");
-            return 1;
+		} else {
 
-            }
+			std::thread t1(doTheThing, client_socket, message);
 
-        char buffer[30000] = {0};
-        ValueRead = read(new_socket, buffer, 30000);
-        printf("%s\n", buffer);
-        write(new_socket, message, strlen(message));
-        printf("----------Hello message sent----------");
-        close(new_socket);
+			printf("\nthe thread shit worked, yo");
 
+			t1.join();	
+
+    	}
+    
     }
-
-    return 0;
+	return 0;
 }
 
