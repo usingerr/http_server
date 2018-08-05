@@ -7,7 +7,9 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <fstream>
 
+using namespace std;
 
 #define PORT 8080
 
@@ -27,7 +29,7 @@ char * getPathOfGetRequest(const char *buf)
 	}
 
 	/* Set the start pointer at the first character beyond the 'GET '. */
-	start += 4;
+	start += 5;
 
 	/* From the start position, set the end pointer to the first white-space character found in the string. */
 	end=start;
@@ -51,28 +53,57 @@ char * getPathOfGetRequest(const char *buf)
 
 	CLEANUP:
 
+	//printf("\n%s 6911420", path);
+
 	/* Return the allocated storage, or NULL in the event of an error, to the caller. */
 	return(path);
 
 }
 
-void doTheThing(int new_socket, char *message) {
+void doTheThing(int new_socket /*char *message*/) {
 
+	char *message = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 150\n\nbig dicks";
 	char ValueRead;
-	printf("\nValueRead instantiated");
-	int socket = new_socket;
-	printf("\nnew socket made");
-	char buffer[30000] = {0};
-	printf("\nbuffer made");
-	ValueRead = read(new_socket, buffer, 30000);
-	printf("\nValueRead has been read\n");
+	char *filePath;
+	char buffer[50000] = {0};
+	ValueRead = read(new_socket, buffer, 50000);
+	printf("\nValueRead has been assigned\n");
 	printf("%s\n", buffer);
-	//if statements for message, based on the path
-	write(new_socket, message, strlen(message));
+	filePath = getPathOfGetRequest(buffer);
+	printf("\nfilepath has been assigned: %s\n", filePath);
+	std::string filePathString (filePath);
+	
+	FILE *file = fopen(filePath, "rb");
+	if (file == NULL) {
+		
+		printf("\nwe didn't do it, reddit\n");
+		FILE *fileOhfour = fopen("fourOhfour.html", "rb");
+		fseek(fileOhfour, 0, SEEK_END);
+		long fsizeOhfour = ftell(fileOhfour);
+		fseek(fileOhfour, 0, SEEK_SET);
+		char *stringOhfour = (char *)malloc(fsizeOhfour + 1);
+		fread(stringOhfour, fsizeOhfour, 1, fileOhfour);
+		fclose(fileOhfour);
+		write(new_socket, stringOhfour, strlen(stringOhfour));
+
+	} else {
+	
+		printf("\nwe did it, reddit\n");
+		printf("the filepath variable works: %s", filePath);
+		FILE *file = fopen(filePath, "rb");
+		fseek(file, 0, SEEK_END);
+		long fsize = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		char *string = (char *)malloc(fsize + 1);
+		fread(string, fsize, 1, file);
+		fclose(file);
+		write(new_socket, string, strlen(string));
+
+	}
+	
 	printf("\npage has been written to");
-	char *filePath = getPathOfGetRequest(buffer);
         printf("\n----------Hello message sent----------\n");
-	printf("%s\n",getPathOfGetRequest(buffer));
+
         close(new_socket);
 }
 
@@ -83,7 +114,7 @@ int main(int argc, char const *argv[]) {
     int server_socket;
 
     //test message
-    char *message = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 150\n\nHello World!";
+    //char *message = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 150\n\nHello World!";
 
 
 
@@ -132,7 +163,7 @@ int main(int argc, char const *argv[]) {
 
             } else {
 		
-		std::thread t1(doTheThing, new_socket, message);
+		std::thread t1(doTheThing, new_socket /*message*/);
 	
 		printf("\nthe thread shit worked, yo");
 
